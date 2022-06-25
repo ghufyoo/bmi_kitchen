@@ -1,10 +1,13 @@
 import 'package:easi_kitchen/screens/history_screens.dart';
 import 'package:easi_kitchen/screens/home_screens.dart';
 import 'package:easi_kitchen/screens/receipt_screens.dart';
+import 'package:easi_kitchen/screens/receipt_setting.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+
+import 'unpaid_order_screen.dart';
 
 final _firestore = FirebaseFirestore.instance;
 
@@ -51,6 +54,16 @@ class _MenuManagerState extends State<MenuManager> {
                   Get.to(const Home());
                 },
               ),
+               ListTile(
+              tileColor: Colors.indigo,
+              title: const Text('Unpaid Orders'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UnpaidOrder()),
+                );
+              },
+            ),
               ListTile(
                 title: const Text('Menu Manager'),
                 onTap: () {
@@ -66,22 +79,50 @@ class _MenuManagerState extends State<MenuManager> {
               ListTile(
                 title: const Text('Receipt Setting'),
                 onTap: () {
-                  Get.to(const ReceiptScreen());
+                  Get.to(const ReceiptPage());
                 },
               )
             ],
           ),
         ),
-        body: Column(
-          children: const [
-            Center(
-              child: Text('Menu'),
+        body: Row(
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Menu',
+                        style: TextStyle(fontSize: 35),
+                      ),
+                    ),
+                  ),
+                  MenuStream(),
+                ],
+              ),
             ),
-            MenuStream(),
-            Center(
-              child: Text('Topping'),
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Topping',
+                        style: TextStyle(fontSize: 35),
+                      ),
+                    ),
+                  ),
+                  ToppingStream(),
+                ],
+              ),
             ),
-            ToppingStream(),
           ],
         ));
   }

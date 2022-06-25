@@ -1,11 +1,24 @@
+import 'dart:convert';
+
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
+import 'package:flutter/services.dart';
 
 class TestPrint {
   BlueThermalPrinter printer = BlueThermalPrinter.instance;
 
-  bill(Map<String, dynamic> order) {
+  bill(
+      Map<String, dynamic> order,
+      num totalFoods,
+      num totalDrinks,
+      num ticketId,
+      num buzzerNumber,
+      String orderTime,
+      String customerName) async {
     Map<String, dynamic> data = <String, dynamic>{};
-
+    ByteData datas = await rootBundle.load("images/receipt-logo.png");
+    List<int> imageBytes =
+        datas.buffer.asUint8List(datas.offsetInBytes, datas.lengthInBytes);
+    String base64Image = base64Encode(imageBytes);
     for (dynamic type in order.keys) {
       data[type.toString()] = order[type];
     }
@@ -13,21 +26,26 @@ class TestPrint {
     List<String> allDrinkMenuName = [];
     List<num> allDrinkMenuQuantity = [];
     List<String> allDrinkMenuTopping = [];
+    List<String> allDrinkMenuGulaLevel = [];
     List<String> allMamuMenuName = [];
     List<num> allMamuMenuQuantity = [];
     List<String> allMamuMenuTopping = [];
     //MINUMAN
     List<String> bungkusMinumMenuName = [];
     List<num> bungkusMinumMenuQuantity = [];
+    List<String> bungkusMinumMenuTopping = [];
     List<String> minumSiniMenuName = [];
     List<num> minumSiniMenuQuantity = [];
     List<String> minumSiniMenuTopping = [];
+    List<String> minumSiniMenuGulaLevel = [];
     //MAKANAN
 
     List<String> bungkusMamuMenuName = [];
     List<num> bungkusMamuMenuQuantity = [];
+    List<String> bungkusMamuMenuTopping = [];
     List<String> makanSiniMenuName = [];
     List<num> makanSiniMenuQuantity = [];
+    List<String> makanSiniMenuTopping = [];
     //FIRST STAGE FOR EXCLUDING MAMU AND MINUM
     for (int s = 0; s < order.length; s++) {
       if (order[s.toString()]['isDrink']) {
@@ -37,12 +55,14 @@ class TestPrint {
         for (int top = 0; top < l.length; top++) {
           allDrinkMenuTopping.add(data[s.toString()]['toppingName'][top]);
         }
+        allDrinkMenuGulaLevel.add(order[s.toString()]['sugarLevel']);
       } else if (order[s.toString()]['isDrink'] == false) {
         allMamuMenuName.add(order[s.toString()]['name']);
         allMamuMenuQuantity.add(order[s.toString()]['quantity']);
         List<dynamic> l = order[s.toString()]['toppingName'];
         for (int top = 0; top < l.length; top++) {
-          allMamuMenuTopping.add(data[s.toString()]['toppingName'][top]);
+          allMamuMenuTopping
+              .add(data[s.toString()]['toppingName'][top].toString());
         }
       }
     }
@@ -50,91 +70,263 @@ class TestPrint {
     //SECOND STAGE FOR EXCLUDING MINUM AND BUNGKUS
     for (int d = 0; d < allDrinkMenuName.length; d++) {
       if (allDrinkMenuName[d].contains('Bungkus')) {
+        //MINUMAN
         bungkusMinumMenuName.add(allDrinkMenuName[d]);
         bungkusMinumMenuQuantity.add(allDrinkMenuQuantity[d]);
-        bungkusMamuMenuName.add(allMamuMenuName[d]);
-        bungkusMamuMenuQuantity.add(allMamuMenuQuantity[d]);
+        for (int top = 0; top < allDrinkMenuTopping.length; top++) {
+          bungkusMinumMenuTopping.add(allDrinkMenuTopping[top]);
+        }
       } else if (allDrinkMenuName[d].contains('Minum Sini')) {
         minumSiniMenuName.add(allDrinkMenuName[d]);
         minumSiniMenuQuantity.add(allDrinkMenuQuantity[d]);
-      } else if (allDrinkMenuName[d].contains('Makan Sini')) {
+        for (int top = 0; top < allDrinkMenuTopping.length; top++) {
+          minumSiniMenuTopping.add(allDrinkMenuTopping[top]);
+        }
+        minumSiniMenuGulaLevel.add(allDrinkMenuGulaLevel[d]);
+      }
+    }
+    for (int d = 0; d < allMamuMenuName.length; d++) {
+      if (allMamuMenuName[d].contains('Makan Sini')) {
         makanSiniMenuName.add(allMamuMenuName[d]);
         makanSiniMenuQuantity.add(allMamuMenuQuantity[d]);
+        for (int top = 0; top < allMamuMenuTopping.length; top++) {
+          makanSiniMenuTopping.add(allMamuMenuTopping[top]);
+        }
+      } else if (allMamuMenuName[d].contains('Bungkus')) {
+        bungkusMamuMenuName.add(allMamuMenuName[d]);
+        bungkusMamuMenuQuantity.add(allMamuMenuQuantity[d]);
+        for (int top = 0; top < allMamuMenuTopping.length; top++) {
+          bungkusMamuMenuTopping.add(allMamuMenuTopping[top]);
+        }
       }
     }
 
-    print('Minum Sini: $minumSiniMenuName');
-    print('Quantity: $minumSiniMenuQuantity');
-    print('Bungkus: $bungkusMinumMenuName');
-    print('Quantity: $bungkusMinumMenuQuantity');
-    print('-------------------------------------');
-    print('Makan Sini: $makanSiniMenuName');
-    print('Quantity: $makanSiniMenuQuantity');
-    print('Bungkus: $bungkusMamuMenuName');
-    print('Quantity: $bungkusMamuMenuQuantity');
-    print('-------------------------------------');
-    print('-------------------------------------');
-    print('ALL DRINKS');
-    print(allDrinkMenuName);
-    print(allDrinkMenuQuantity);
-    print(allDrinkMenuTopping);
-    print('ALL MAMU');
-    print(allMamuMenuName);
-    print(allMamuMenuQuantity);
-    print(allMamuMenuTopping);
-  }
+    if (allDrinkMenuName.isNotEmpty) {
+      if (totalDrinks != 0 && totalFoods != 0) {
+        printer.printImageBytes(
+            datas.buffer.asUint8List(datas.offsetInBytes, datas.lengthInBytes));
+        printer.printCustom('Untuk: $customerName  ', 2, 1);
+        printer.printCustom('Nombor Order $ticketId  ', 1, 0);
+        printer.printCustom('Masa Order $orderTime  ', 1, 0);
+        printer.printCustom('Jumlah Makanan : $totalFoods', 1, 0);
+        printer.printCustom('Jumlah Minuman : $totalDrinks', 1, 0);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('SET MAMU', 4, 1);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('UNTUK CENDOL', 3, 1);
+        printer.printNewLine();
+        for (int s = 0; s < order.length; s++) {
+          if (order[s.toString()]['isDrink']) {
+            if (order[s.toString()]['name'].toString().contains('Minum Sini')) {
+              printer.printCustom(
+                  '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Minum Sini', '\n(MINUM SINI)')}',
+                  2,
+                  0);
 
-  sample(String pathImage) async {
-    //SIZE
-    // 0- normal size text
-    // 1- only bold text
-    // 2- bold with medium text
-    // 3- bold with large text
-    //ALIGN
-    // 0- ESC_ALIGN_LEFT
-    // 1- ESC_ALIGN_CENTER
-    // 2- ESC_ALIGN_RIGHT
+              List<dynamic> l = order[s.toString()]['toppingName'];
+              for (int top = 0; top < l.length; top++) {
+                printer.printCustom(
+                    '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+              }
+              printer.printCustom(
+                  '* GULA: ${data[s.toString()]['sugarLevel']}', 3, 0);
+              printer.printCustom(
+                  '* ICE: ${data[s.toString()]['iceLevel']}', 3, 0);
+              printer.printNewLine();
+            } else if (order[s.toString()]['name']
+                .toString()
+                .contains('Bungkus')) {
+              printer.printCustom(
+                  '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Bungkus', '\n(Bungkus)')}',
+                  2,
+                  0);
 
-//     var response = await http.get("IMAGE_URL");
-//     Uint8List bytes = response.bodyBytes;
-    printer.isConnected.then((isConnected) {
-      if (isConnected!) {
+              List<dynamic> l = order[s.toString()]['toppingName'];
+              for (int top = 0; top < l.length; top++) {
+                printer.printCustom(
+                    '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+              }
+              printer.printCustom(
+                  '* GULA: ${data[s.toString()]['sugarLevel']}', 3, 0);
+              printer.printCustom(
+                  '* ICE: ${data[s.toString()]['iceLevel']}', 3, 0);
+              printer.printNewLine();
+            }
+          }
+        }
+
+        printer.printCustom('########################', 2, 0);
+        printer.printCustom('BUZZER : ${buzzerNumber.toString()}', 4, 1);
+        printer.printCustom('########################', 2, 0);
         printer.printNewLine();
-        printer.printCustom("HEADER", 3, 1);
+        printer.paperCut();
+        if (allMamuMenuName.isNotEmpty) {
+          printer.printImageBytes(datas.buffer
+              .asUint8List(datas.offsetInBytes, datas.lengthInBytes));
+          printer.printCustom('Untuk: $customerName  ', 2, 1);
+          printer.printCustom('Nombor Order $ticketId  ', 1, 0);
+          printer.printCustom('Masa Order $orderTime  ', 1, 0);
+          printer.printCustom('Jumlah Makanan : $totalFoods', 1, 0);
+          printer.printCustom('Jumlah Minuman : $totalDrinks', 1, 0);
+          printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+          printer.printCustom('SET MAMU', 4, 1);
+          printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+          printer.printCustom('UNTUK DAPUR', 3, 1);
+          printer.printNewLine();
+          for (int s = 0; s < order.length; s++) {
+            if (order[s.toString()]['isDrink'] == false) {
+              if (order[s.toString()]['name']
+                  .toString()
+                  .contains('Makan Sini')) {
+                printer.printCustom(
+                    '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Makan Sini', '\n')}(MAKAN SINI)',
+                    2,
+                    0);
+
+                List<dynamic> l = order[s.toString()]['toppingName'];
+                for (int top = 0; top < l.length; top++) {
+                  printer.printCustom(
+                      '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+                }
+
+                printer.printNewLine();
+              } else if (order[s.toString()]['name']
+                  .toString()
+                  .contains('Bungkus')) {
+                printer.printCustom(
+                    '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Bungkus', '\n')}(BUNGKUS)',
+                    2,
+                    0);
+
+                List<dynamic> l = order[s.toString()]['toppingName'];
+                for (int top = 0; top < l.length; top++) {
+                  printer.printCustom(
+                      '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+                }
+                printer.printCustom(
+                    '* Pedas: ${data[s.toString()]['spicyLevel']}', 3, 0);
+
+                printer.printNewLine();
+              }
+            }
+          }
+          printer.printCustom('########################', 2, 0);
+          printer.printCustom('BUZZER : ${buzzerNumber.toString()}', 4, 1);
+          printer.printCustom('########################', 2, 0);
+          printer.printNewLine();
+          printer.paperCut();
+        }
+      } else if (totalDrinks != 0 && totalFoods == 0) {
+        printer.printImageBytes(
+            datas.buffer.asUint8List(datas.offsetInBytes, datas.lengthInBytes));
+        printer.printCustom('Untuk: $customerName  ', 2, 1);
+        printer.printCustom('Nombor Order $ticketId  ', 1, 0);
+        printer.printCustom('Masa Order $orderTime  ', 1, 0);
+        printer.printCustom('Jumlah Makanan : $totalFoods', 1, 0);
+        printer.printCustom('Jumlah Minuman : $totalDrinks', 1, 0);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('AIR SAHAJA', 4, 1);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('UNTUK CENDOL', 3, 1);
         printer.printNewLine();
-        printer.printImage(pathImage); //path of your image/logo
-        printer.printNewLine();
-//      bluetooth.printImageBytes(bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes));
-        printer.printLeftRight("LEFT", "RIGHT", 0);
-        printer.printLeftRight("LEFT", "RIGHT", 1);
-        printer.printLeftRight("LEFT", "RIGHT", 1, format: "%-15s %15s %n");
-        printer.printNewLine();
-        printer.printLeftRight("LEFT", "RIGHT", 2);
-        printer.printLeftRight("LEFT", "RIGHT", 3);
-        printer.printLeftRight("LEFT", "RIGHT", 4);
-        printer.printNewLine();
-        printer.print3Column("Col1", "Col2", "Col3", 1);
-        printer.print3Column("Col1", "Col2", "Col3", 1,
-            format: "%-10s %10s %10s %n");
-        printer.printNewLine();
-        printer.print4Column("Col1", "Col2", "Col3", "Col4", 1);
-        printer.print4Column("Col1", "Col2", "Col3", "Col4", 1,
-            format: "%-8s %7s %7s %7s %n");
-        printer.printNewLine();
-        String testString = " čĆžŽšŠ-H-ščđ";
-        printer.printCustom(testString, 1, 1, charset: "windows-1250");
-        printer.printLeftRight("Številka:", "18000001", 1,
-            charset: "windows-1250");
-        printer.printCustom("Body left", 1, 0);
-        printer.printCustom("Body right", 0, 2);
-        printer.printNewLine();
-        printer.printCustom("Thank You", 2, 1);
-        printer.printNewLine();
-        printer.printQRcode("Insert Your Own Text to Generate", 200, 200, 1);
-        printer.printNewLine();
+        for (int s = 0; s < order.length; s++) {
+          if (order[s.toString()]['isDrink']) {
+            if (order[s.toString()]['name'].toString().contains('Minum Sini')) {
+              printer.printCustom(
+                  '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Minum Sini', '\n(MINUM SINI)')}',
+                  2,
+                  0);
+
+              List<dynamic> l = order[s.toString()]['toppingName'];
+              for (int top = 0; top < l.length; top++) {
+                printer.printCustom(
+                    '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+              }
+              printer.printCustom(
+                  '* GULA: ${data[s.toString()]['sugarLevel']}', 3, 0);
+              printer.printCustom(
+                  '* ICE: ${data[s.toString()]['iceLevel']}', 3, 0);
+              printer.printNewLine();
+            } else if (order[s.toString()]['name']
+                .toString()
+                .contains('Bungkus')) {
+              printer.printCustom(
+                  '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Bungkus', '\n(Bungkus)')}',
+                  2,
+                  0);
+
+              List<dynamic> l = order[s.toString()]['toppingName'];
+              for (int top = 0; top < l.length; top++) {
+                printer.printCustom(
+                    '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+              }
+              printer.printCustom(
+                  '* GULA: ${data[s.toString()]['sugarLevel']}', 3, 0);
+              printer.printCustom(
+                  '* ICE: ${data[s.toString()]['iceLevel']}', 3, 0);
+              printer.printNewLine();
+            }
+          }
+        }
+        printer.printCustom('########################', 2, 0);
+        printer.printCustom('BUZZER : ${buzzerNumber.toString()}', 4, 1);
+        printer.printCustom('########################', 2, 0);
         printer.printNewLine();
         printer.paperCut();
       }
-    });
+    } else {
+      if (allDrinkMenuName.isEmpty) {
+        printer.printImageBytes(
+            datas.buffer.asUint8List(datas.offsetInBytes, datas.lengthInBytes));
+        printer.printCustom('Untuk: $customerName  ', 2, 1);
+        printer.printCustom('Nombor Order $ticketId  ', 1, 0);
+        printer.printCustom('Masa Order $orderTime  ', 1, 0);
+        printer.printCustom('Jumlah Makanan : $totalFoods', 1, 0);
+        printer.printCustom('Jumlah Minuman : $totalDrinks', 1, 0);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('MAKANAN SAHAJA', 4, 1);
+        printer.printCustom('<<<<<<<<<<<<<>>>>>>>>>>>', 2, 0);
+        printer.printCustom('UNTUK DAPUR', 3, 1);
+        printer.printNewLine();
+        for (int s = 0; s < order.length; s++) {
+          if (order[s.toString()]['name'].toString().contains('Makan Sini')) {
+            printer.printCustom(
+                '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Makan Sini', '\n')}(MAKAN SINI)',
+                2,
+                0);
+
+            List<dynamic> l = order[s.toString()]['toppingName'];
+            for (int top = 0; top < l.length; top++) {
+              printer.printCustom(
+                  '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+            }
+
+            printer.printNewLine();
+          } else if (order[s.toString()]['name']
+              .toString()
+              .contains('Bungkus')) {
+            printer.printCustom(
+                '${order[s.toString()]['quantity']}x${order[s.toString()]['name'].toString().replaceAll('Bungkus', '\n')}(BUNGKUS)',
+                2,
+                0);
+
+            List<dynamic> l = order[s.toString()]['toppingName'];
+            for (int top = 0; top < l.length; top++) {
+              printer.printCustom(
+                  '>>${data[s.toString()]['toppingName'][top]}', 2, 0);
+            }
+            printer.printCustom(
+                '* Pedas: ${data[s.toString()]['spicyLevel']}', 3, 0);
+
+            printer.printNewLine();
+          }
+        }
+        printer.printCustom('########################', 2, 0);
+        printer.printCustom('BUZZER : ${buzzerNumber.toString()}', 4, 1);
+        printer.printCustom('########################', 2, 0);
+        printer.printNewLine();
+        printer.paperCut();
+      }
+    }
   }
 }

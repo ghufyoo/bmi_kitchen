@@ -1,9 +1,11 @@
+import 'package:easi_kitchen/screens/receipt_setting.dart';
+import 'package:easi_kitchen/screens/unpaid_order_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:easi_kitchen/screens/manage_screens.dart';
 import 'package:easi_kitchen/screens/receipt_screens.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import 'home_screens.dart';
 
@@ -24,14 +26,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text('Past Order For Today'),
+        title: const Text('Past Order For Today'),
       ),
       drawer: Drawer(
         backgroundColor: Colors.teal,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
+            const DrawerHeader(
               decoration: BoxDecoration(
                   image: DecorationImage(
                       image: AssetImage(
@@ -41,36 +43,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
               child: Text('Setting'),
             ),
             ListTile(
-              title: Text('Home'),
+              title: const Text('Home'),
               onTap: () {
-                Get.to(Home());
+                Get.to(const Home());
+              },
+            ),
+             ListTile(
+              tileColor: Colors.indigo,
+              title: const Text('Unpaid Orders'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => UnpaidOrder()),
+                );
               },
             ),
             ListTile(
-              title: Text('Menu Manager'),
+              title: const Text('Menu Manager'),
               onTap: () {
-                Get.to(MenuManager());
+                Get.to(const MenuManager());
               },
             ),
             ListTile(
-              title: Text('Past Order'),
+              title: const Text('Past Order'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              title: Text('Receipt Setting'),
+              title: const Text('Receipt Setting'),
               onTap: () {
-                Get.to(ReceiptScreen());
+                Get.to(const ReceiptPage());
               },
             )
           ],
         ),
       ),
       body: Padding(
-        padding: EdgeInsets.all(8),
+        padding: const EdgeInsets.all(8),
         child: Column(
-          children: [
+          children: const [
             PastOrderStream(),
           ],
         ),
@@ -84,18 +96,16 @@ class PastOrderStream extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var today = DateTime.now();
-    today = DateTime(today.year, today.month, today.day);
-
+    String datetime = DateFormat.yMd().format(DateTime.now());
     return StreamBuilder<QuerySnapshot>(
       stream: _firestore
           .collection('newOrder')
-          .where('datetime', isGreaterThan: today)
+          .where('currentDate', isEqualTo: datetime)
           .where('isDone', isEqualTo: true)
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return Center(
+          return const Center(
             child: CircularProgressIndicator(
               backgroundColor: Colors.lightBlueAccent,
             ),
@@ -105,29 +115,39 @@ class PastOrderStream extends StatelessWidget {
         // final order = snapshot.data?.docs;
         List<PastTicketUI> ticketKitchen = [];
         for (var ticket in orderss!) {
-          final customer = ticket.get('user_email');
-          final datetime = ticket.get('datetime');
-          final receiptID = ticket.get('receipt_id');
-          final dishName = List.from(ticket.get('name'));
-          final dishTopping = List.from(ticket.get('topping'));
-          final dishPrice = List.from(ticket.get('price'));
-          final dishQuantity = List.from(ticket.get('quantity'));
-          final isDone = ticket.get('isDone');
-          final isPaid = ticket.get('isPaid');
+          final customerEmail = ticket.get('userEmail');
+          final customerName = ticket.get('userName');
+          final customerPhonenumber = ticket.get('userPhoneNumber');
+          final receiptTime = ticket.get('currentTime');
+          final receiptDate = ticket.get('currentDate');
+          final receiptId = ticket.get('receiptId');
+          final receiptUniqueId = ticket.get('ticketId');
+          final buzzerNumber = ticket.get('buzzerNumber');
+          final order = ticket.get('order');
           final totalPrice = ticket.get('totalPrice');
+          final totalFoods = ticket.get('totalFoods');
+          final totalDrinks = ticket.get('totalDrinks');
+          final isDone = ticket.get('isDone');
+          final isPickup = ticket.get('isPickup');
+          final isPaid = ticket.get('isPaid');
 
           final messageBubble = PastTicketUI(
-            lenght: orderss.length,
-            orderID: receiptID,
-            orderTime: datetime,
-            customerEmail: customer,
-            price: dishPrice,
-            quantity: dishQuantity,
-            dishName: dishName,
-            dishTopping: dishTopping,
-            isPaid: isPaid,
-            isDone: isDone,
+            orderLength: orderss.length,
+            customerEmail: customerEmail,
+            customerName: customerName,
+            customerPhonenumber: customerPhonenumber,
+            receiptTime: receiptTime,
+            receiptDate: receiptDate,
+            receiptId: receiptId,
+            receiptUniqueId: receiptUniqueId,
+            buzzerNumber: buzzerNumber,
+            order: order,
+            totalDrinks: totalDrinks,
+            totalFoods: totalFoods,
             totalPrice: totalPrice,
+            isPaid: isPaid,
+            isPickup: isPickup,
+            isDone: isDone,
           );
 
           ticketKitchen.add(messageBubble);
@@ -135,7 +155,8 @@ class PastOrderStream extends StatelessWidget {
         return Expanded(
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
             children: ticketKitchen,
           ),
         );
@@ -147,28 +168,39 @@ class PastOrderStream extends StatelessWidget {
 class PastTicketUI extends StatefulWidget {
   PastTicketUI(
       {Key? key,
-      required this.lenght,
-      required this.orderID,
-      required this.orderTime,
+      required this.orderLength,
       required this.customerEmail,
-      required this.price,
-      required this.quantity,
-      required this.dishName,
-      required this.dishTopping,
+      required this.customerName,
+      required this.customerPhonenumber,
+      required this.receiptTime,
+      required this.receiptDate,
+      required this.receiptUniqueId,
+      required this.receiptId,
+      required this.buzzerNumber,
+      required this.order,
+      required this.totalDrinks,
+      required this.totalFoods,
+      required this.totalPrice,
       required this.isPaid,
-      required this.isDone,
-      required this.totalPrice})
+      required this.isPickup,
+      required this.isDone})
       : super(key: key);
-  final int lenght;
-  final num orderID;
-  final String orderTime;
+  final int orderLength;
   final String customerEmail;
-  final List<dynamic> price;
-  final List<dynamic> quantity;
-  final List<dynamic> dishName;
-  final List<dynamic> dishTopping;
+  final String customerName;
+  final String customerPhonenumber;
+  final String receiptTime;
+  final String receiptDate;
+  final num receiptId;
+  final String receiptUniqueId;
+  final num buzzerNumber;
+  final Map<String, dynamic> order;
+  final num totalDrinks;
+  final num totalFoods;
   final num totalPrice;
+
   bool isPaid;
+  bool isPickup;
   bool isDone;
 
   @override
@@ -179,170 +211,224 @@ class _PastTicketUIState extends State<PastTicketUI> {
   @override
   Widget build(BuildContext context) {
     var screenSize = MediaQuery.of(context).size;
-    return widget.isDone
-        ? Row(
-            children: [
-              Container(
-                decoration:
-                    BoxDecoration(border: Border.all(color: Colors.black)),
-                width: screenSize.width / 4,
-                height: screenSize.height * 0.95,
-                child: widget.isPaid
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: screenSize.width / 4,
-                            decoration: BoxDecoration(
-                                color: Colors.teal,
-                                border: Border.all(
-                                  color: Colors.grey,
-                                  width: 2.0,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color: Colors.grey,
-                                      blurRadius: 2.0,
-                                      offset: Offset(2.0, 2.0))
-                                ]),
-                            child: Center(
-                              child: Text(
-                                '${widget.orderID}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 30.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Text('Masa Order = ${widget.orderTime}'),
-                          Text('Email Customer =  ${widget.customerEmail}'),
-                          SizedBox(
-                            width: 5,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [Text('Order'), Text('Kuantiti')],
-                          ),
-                          SizedBox(
-                            width: 2,
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                width: screenSize.width / 4,
-                                height: screenSize.height * 0.5,
-                                child: ListView.builder(
-                                    itemCount: widget.dishName.length,
-                                    itemBuilder: (context, index) {
-                                      return Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Column(
-                                            children: [
-                                              SizedBox(
-                                                width: screenSize.width / 5,
-                                                child: AutoSizeText(
-                                                  widget.dishName[index],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 20.0,
-                                                  ),
-                                                  maxLines: 3,
-                                                ),
-                                              ),
-                                              SizedBox(
-                                                width: screenSize.width / 5,
-                                                child: AutoSizeText(
-                                                  widget.dishTopping[index],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 15.0,
-                                                  ),
-                                                  maxLines: 3,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            'x${widget.quantity[index]}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 26.0,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }),
-                              )
-                            ],
-                          ),
-                          Spacer(),
-                          InkWell(
-                            onTap: () {
-                              // printer.printCustom('message', 1, 1);
-
-                              setState(() {
-                                _firestore
-                                    .collection('newOrder')
-                                    .doc('${widget.orderID}')
-                                    .update({'isDone': true});
-                              });
-                            },
-                            child: Container(
-                              width: screenSize.width / 4,
-                              decoration: BoxDecoration(
-                                  color: Colors.teal,
-                                  border: Border.all(
-                                    color: Colors.grey,
-                                    width: 2.0,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.grey,
-                                        blurRadius: 2.0,
-                                        offset: Offset(2.0, 2.0))
-                                  ]),
-                              child: Center(
-                                child: Text(
-                                  'Siap',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 30.0,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          )
-                        ],
-                      )
-                    : Column(
-                        children: [
-                          Text(
-                              'email: ${widget.customerEmail} \n id: ${widget.orderID} \n status: belum Bayar'),
-                          TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _firestore
-                                      .collection('newOrder')
-                                      .doc('${widget.orderID}')
-                                      .update({'isPaid': true});
-                                });
-                              },
-                              child: Text(
-                                  'Jumlah perlu dibayar ${widget.totalPrice} '))
-                        ],
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Center(
+          child: Container(
+            width: screenSize.width / 3.5,
+            height: screenSize.height * 0.8,
+            padding: const EdgeInsets.only(left: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(17),
+              color: Colors.grey[200],
+            ),
+            child: Column(
+              children: [
+                Center(
+                  child: Text(
+                    'Order No: ${widget.receiptId}',
+                    style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.black),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    'Buzzer Number: ${widget.buzzerNumber}',
+                    style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 30,
+                        color: Colors.black),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    'Dipesan pada Pukul ${widget.receiptTime} Pada Hari Ini',
+                    style: const TextStyle(
+                        fontFamily: 'Roboto',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.black),
+                  ),
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: screenSize.width / 5,
+                      child: const Text(
+                        'Menu',
+                        style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.black),
                       ),
+                    ),
+                    const Spacer(),
+                    const Text(
+                      'Quantity',
+                      style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black),
+                    ),
+                    const Spacer(),
+                    const Padding(
+                      padding: EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        'RM',
+                        style: TextStyle(
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    SizedBox(
+                      width: screenSize.width / 3.2,
+                      height: screenSize.height * 0.4,
+                      child: ListView.builder(
+                          itemCount: widget.order.length,
+                          itemBuilder: (context, index) {
+                            Map<String, dynamic> data = <String, dynamic>{};
+
+                            for (dynamic type in widget.order.keys) {
+                              data[type.toString()] = widget.order[type];
+                            }
+
+                            List<dynamic> l =
+                                data[index.toString()]['toppingName'];
+                           
+                            return Row(
+                              children: [
+                                Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    SizedBox(
+                                        width: screenSize.width / 6,
+                                        child: Text(
+                                          '${index + 1}~' +
+                                              data[index.toString()]['name'],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )),
+                                    SizedBox(
+                                      width: screenSize.width / 6,
+                                      child: ListView.builder(
+                                          shrinkWrap: true,
+                                          itemCount: l.length,
+                                          itemBuilder: (context, indexx) {
+                                            return SizedBox(
+                                              width: screenSize.width / 2,
+                                              child: Text(
+                                                data[index.toString()]
+                                                                ['toppingName']
+                                                            [indexx]
+                                                        .toString() +
+                                                    '(${data[index.toString()]['toppingPrice'][indexx].toString()})',
+                                                textAlign: TextAlign.start,
+                                                style: const TextStyle(
+                                                    fontStyle: FontStyle.italic,
+                                                    fontSize: 14,
+                                                    color: Colors.black),
+                                              ),
+                                            );
+                                          }),
+                                    )
+                                  ],
+                                ),
+                                const Spacer(),
+                                Text(
+                                  data[index.toString()]['quantity'].toString(),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  data[index.toString()]['totalPrice']
+                                      .toString(),
+                                ),
+                              ],
+                            );
+                          }),
+                    ),
+                    Container(
+                      height: 2,
+                      width: screenSize.width * 0.95,
+                      color: Colors.black,
+                    ),
+                    Center(
+                      child: Text(
+                        'Jumlah RM${widget.totalPrice}',
+                        style: const TextStyle(
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: Colors.black),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+        InkWell(
+          onTap: () {
+            // printer.printCustom('message', 1, 1);
+
+            setState(() {
+              _firestore
+                  .collection('newOrder')
+                  .doc(widget.receiptUniqueId)
+                  .update({'isDone': false});
+              _firestore
+                  .collection('BuzzerNumber')
+                  .doc(widget.buzzerNumber.toString())
+                  .update({'inUse': true});
+            });
+          },
+          child: Container(
+            width: screenSize.width / 4,
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(17),
+                color: Colors.teal,
+                border: Border.all(
+                  color: Colors.grey,
+                  width: 1.0,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                      color: Colors.grey,
+                      blurRadius: 2.0,
+                      offset: Offset(2.0, 2.0))
+                ]),
+            child: const Center(
+              child: Text(
+                'Belum Siap!',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30.0,
+                    color: Colors.white),
               ),
-              SizedBox(
-                width: 10,
-              )
-            ],
-          )
-        : SizedBox();
+            ),
+          ),
+        )
+      ],
+    );
   }
 }

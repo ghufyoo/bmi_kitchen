@@ -1,16 +1,14 @@
-# easi_kitchen
+# Cendol BMI Kitchen App
 
-A new Flutter project.
+Kitchen Android Application Ordering web site built using flutter
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
+![](/images/BMIORDER_portfolio.svg)
+![](/images/2.svg)
+![](/images/3.svg)
+![](/images/4.svg)
+![](/images/5.svg)
+![](/images/6.svg)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+#The Customer App
+- [Check Out the Customer QR web-site](https://github.com/ghufyoo/bmi_kitchen)
